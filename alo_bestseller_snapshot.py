@@ -120,6 +120,9 @@ def fetch_via_json(handle: str) -> list[dict] | None:
                        if v.get("compare_at_price")]
             colors = {re.split(r"\s*/\s*", v.get("title", ""))[0]
                       for v in variants if v.get("title")}
+            images = p.get("images", [])
+            image = (images[0].get("src", "") if images
+                     else (p.get("image") or {}).get("src", ""))
             rows.append({
                 "rank": rank,
                 "title": p.get("title", ""),
@@ -129,6 +132,7 @@ def fetch_via_json(handle: str) -> list[dict] | None:
                 "compare_at_price": min(compare) if compare else "",
                 "on_sale": bool(compare),
                 "color_count": len(colors),
+                "image": image,
                 "tags": ";".join(p.get("tags", []))[:200],
             })
         return rows
@@ -175,6 +179,11 @@ def fetch_via_playwright(handle: str) -> list[dict]:
             price_el = card.query_selector("[class*='price']")
             price_txt = (price_el.inner_text() if price_el else "").strip()
             price_match = re.search(r"[\d,.]+", price_txt.replace("₩", ""))
+            img_el = card.query_selector("img")
+            image = ""
+            if img_el:
+                image = (img_el.get_attribute("src")
+                         or img_el.get_attribute("data-src") or "")
             rank += 1
             rows.append({
                 "rank": rank,
@@ -185,6 +194,7 @@ def fetch_via_playwright(handle: str) -> list[dict]:
                 "compare_at_price": "",
                 "on_sale": "SALE" in price_txt.upper() or "%" in price_txt,
                 "color_count": "",
+                "image": image,
                 "tags": "",
             })
             if rank >= TOP_N:
@@ -210,7 +220,7 @@ def discover_collections():
 FIELDNAMES = [
     "snapshot_date", "gender", "collection", "rank", "title", "category",
     "season_tag", "product_type", "price", "compare_at_price", "on_sale",
-    "color_count", "handle", "tags",
+    "color_count", "image", "handle", "tags",
 ]
 
 
